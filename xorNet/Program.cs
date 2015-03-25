@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace xorNet
 {
-
+    
     public interface INeuron
     {
         double Result { get; set; }
@@ -173,50 +173,67 @@ namespace xorNet
             var keys = new List<INeuron>(net.outputlayer.Neurons[0].Weights.Keys);
             foreach (var key in keys)
             {
-                net.outputlayer.Neurons[0].Weights[key] += n * net.outputlayer.Neurons[0].Result * net.outputlayer.Neurons[0].Delta;
+                net.outputlayer.Neurons[0].Weights[key] += n * key.Result * net.outputlayer.Neurons[0].Delta;
                 net.hiddenlayer.Neurons[i].Delta = net.hiddenlayer.Neurons[i].Result * (1 - net.hiddenlayer.Neurons[i].Result) * net.outputlayer.Neurons[0].Delta * net.outputlayer.Neurons[0].Weights[key];
                 ++i;
             }
             keys = new List<INeuron>(net.hiddenlayer.Neurons[0].Weights.Keys);
             foreach (var key in keys)
             {
-                net.hiddenlayer.Neurons[0].Weights[key] += n * net.hiddenlayer.Neurons[0].Result * net.hiddenlayer.Neurons[0].Delta;
+                net.hiddenlayer.Neurons[0].Weights[key] += n * key.Result * net.hiddenlayer.Neurons[0].Delta;
             }
             keys = new List<INeuron>(net.hiddenlayer.Neurons[1].Weights.Keys);
             foreach (var key in keys)
             {
-                net.hiddenlayer.Neurons[1].Weights[key] += n * net.hiddenlayer.Neurons[1].Result * net.hiddenlayer.Neurons[1].Delta;
+                net.hiddenlayer.Neurons[1].Weights[key] += n * key.Result * net.hiddenlayer.Neurons[1].Delta;
             }
         }
 
         public bool checkResult(double t)
         {
             return Math.Abs(t - this.outputlayer.Neurons[0].Result) < 0.1;
-        }
-    }
+        }         
+    }  
 
     class Program
-    {
+    {     
         static void Main(string[] args)
         {
+            Dictionary<double[], double> Data = new Dictionary<double[], double>(); 
+            Data.Add(new double[] { 0, 0 },0);
+            Data.Add(new double[] { 0, 1 }, 1);
+            Data.Add(new double[] { 1, 0 }, 1);
+            Data.Add(new double[] { 1, 1 }, 0);
+            Random rand = new Random();
             NeuralNetwork xornet = new NeuralNetwork();
-            for (int i = 0; i < 2; ++i)
+            int iterations = 0;
+            bool stop = false;
+            xornet.initialize(0, 0);
+            while (!stop)
             {
-                for (int j = 0; j < 2; ++j)
-                {                          
-                    xornet.initialize(i, j);
-                    int xor = (int)i^(int)j;
-                    int n=1;
+                stop = true;
+                foreach (var x in Data)       
+                {
+                    xornet.inputlayer.Neurons[0].Result = x.Key[0];
+                    xornet.inputlayer.Neurons[1].Result = x.Key[1];
                     xornet.Run();
-                    while (!xornet.checkResult((double)xor))
+                    if (xornet.checkResult(x.Value))
                     {
-                        xornet.train((double)xor, 0.3);
-                        xornet.Run();
-                        ++n;
-                    }
-                    Console.WriteLine("{0} xor {1} = {2} ({3}) : {4} iterations", i, j, xornet.OutputLayer.Neurons[0].Result, xor,n);
+                        continue;
+                    } 
+                    stop = false;
+                    xornet.train(x.Value, 0.3);
+                    ++iterations;
                 }
-            }   
+            }
+            Console.WriteLine("Training completed: {0} iterations", iterations);
+            foreach (var x in Data)
+            {
+                xornet.inputlayer.Neurons[0].Result = x.Key[0];
+                xornet.inputlayer.Neurons[1].Result = x.Key[1];
+                xornet.Run();
+                Console.WriteLine("{0} xor {1} = {2} ({3})", x.Key[0], x.Key[1], xornet.OutputLayer.Neurons[0].Result, x.Value);
+            }           
         }
     }
 }
